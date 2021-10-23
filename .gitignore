@@ -1,3 +1,9 @@
+# Discord bot token
+config.json
+
+# GitHub personal access token
+github_token.txt
+
 # Logs
 logs
 *.log
