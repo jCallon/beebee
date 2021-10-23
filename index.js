@@ -1,6 +1,10 @@
+//
+// Welcome to Beebee's inner workings!
+//
+
 const { Client, Intents } = require('discord.js');
-const token        = require('./config.json');
-const cmd          = require('./commands.js');
+const { token }    = require('./config.json');
+const { cmd }      = require('./commands.js');
 const { read_csv } = require('./csv.js');
 
 const black_list = //put annoying users here, use of roles may be more efficient if you have perms
@@ -8,8 +12,12 @@ const black_list = //put annoying users here, use of roles may be more efficient
 const white_list = //if spam is an issue, use of roles may be more efficient if you have perms
   [];
 
-const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
-client.once('ready', () => { console.log('Ready!'); });
+const client = new Client({ intents: [
+  Intents.FLAGS.GUILDS,
+  Intents.FLAGS.GUILD_MESSAGES,
+  Intents.FLAGS.DIRECT_MESSAGES
+] });
+client.once('ready', () => { console.log(`Ready!\nConnected as ${client.user.tag}.`); });
 client.login(token);
 
 
@@ -51,7 +59,7 @@ client.on('interactionCreate', async interaction =>
     //what command is this?
     if(cmd.has(flag))
     {
-      message.channel.send(cmd[flag](file, data, arg));
+      message.reply(cmd[flag](file, data, arg).message);
       return true;
     }
   }

@@ -15,11 +15,23 @@ function read_csv(file)
 
 
 //returns true if success, otherwise false
-function write_csv(file, data)
+function write_csv(file, data, archive)
 {
-  //CASE: archive - if the file was last modified yesterday or older, archive it, then modify new copy
-  //TODO
-  //console.log(`${file} archived. Working on new copy.`);
+  const file_name = `./brackets/${file}.csv`;
+
+  //CASE: archive - if the file was last modified >= 24 hours ago archive it, then modify new copy
+  //TODO not tested
+  if(archive === true)
+  {
+    const old_date = fs.fstatSync(file_name, (err, stats) => { return stats.ctime });
+
+    if((new Date().getTime() - old_date.getTime()) > 86400000)
+    {
+      fs.renameSync(file_name, 
+        `./brackets/archive/${file}_${old_data.toDateString().replaceAll(' ','_')}.csv`);
+      console.log(`${file} archived. Working on new copy.`);
+    }
+  }
 
   //write file
   const records = generate({ objectmode: true, columns: 4, length: data.length() });

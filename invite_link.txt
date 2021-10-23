@@ -1,0 +1,5 @@
+If you are creating your own instance of Beebee, you might find this helpful. For help creating an instance of a Discord bot, Discord.js's website says how.
+
+https://discord.com/oauth2/authorize?client_id=$application_id&permissions=274877910016&scope=bot
+
+The recommended permissions integer shown above is: view channels, send messages, send messages in thread.
