@@ -5,7 +5,7 @@ const { read_csv } = require('./csv.js');
 
 const black_list = //put annoying users here, use of roles may be more efficient if you have perms
   [];
-const white_list = //if spam is an issue... againm use of roles may be more efficient if you have perms
+const white_list = //if spam is an issue, use of roles may be more efficient if you have perms
   [];
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
@@ -21,7 +21,7 @@ client.on('interactionCreate', async interaction =>
   const cmd = message.content.trim().toLower();
 
   //CASE: message is not meant for bot - abort
-  if(cmd.startsWith('!bracket ' === false)                                return false;
+  if(cmd.startsWith('!bracket ' === false))                               return false;
   //CASE: author is in black_list - abort
   if(black_list.has(message.author) === true)                             return false;
   //CASE: there is a white_list and the author is not in it - abort
@@ -57,6 +57,6 @@ client.on('interactionCreate', async interaction =>
   }
 
   //CASE: the flag was unrecognised, no command run - tell user
-  message.channel.respond('Unrecognized flag.\nFor usage, issue tracking, and feature requests see GITHUB_LINK TODO.');
+  message.channel.respond('Unrecognized command.\nFor usage, issue tracking, and feature requests see https://github.com/jCallon/beebee.');
   return false;
 });

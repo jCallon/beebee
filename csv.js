@@ -1,24 +1,20 @@
-const generate = require('csv-generate');
-const parse    = require('csv-parse');
+const generate = require('csv-generate/lib/sync');
+const parse    = require('csv-parse/lib/sync');
+const assert   = require('assert');
+const fs       = require('fs');
 
 
 
+//returns populated data if success, otherwise undefined
 function read_csv(file)
 {
-  let data = undefined;
-
-  let tmp = [];
-  await fs.createReadStream(`brackets/${file}.csv`)
-    .pipe({parse({ delimeter: ',' })
-    .on('data',  r  => { tmp.push(r); })
-    .on('error', e  => { console.log(`Error reading ${file}.csv.`); })
-    .on('end',   () => { data = tmp; });
-
-  return data;
+  return parse(fs.readFileSync(`./brackets/${file}.csv`, { encoding: 'utf8', flag: 'r'} ),
+    { objectmode: true, columns: 4 });
 }
 
 
 
+//returns true if success, otherwise false
 function write_csv(file, data)
 {
   //CASE: archive - if the file was last modified yesterday or older, archive it, then modify new copy
@@ -26,15 +22,10 @@ function write_csv(file, data)
   //console.log(`${file} archived. Working on new copy.`);
 
   //write file
-  await fs.createWriteStream(`brackets/${file}.csv`)
-    .pipe({generate({ delimeter: ',' })
-    .on('data',  r  => { tmp.push(r); })
-    .on('error', e  => { console.log(`Error writing ${file}.csv.`); })
-    .on('end',   () => { data = tmp; });
+  const records = generate({ objectmode: true, columns: 4, length: data.length() });
 
-  return data;
-
-  return true;
+  return fs.writeFileSync(`./brackets/${file}.csv`, 
+    assert.deepEqual(records, data));
 }
 
 

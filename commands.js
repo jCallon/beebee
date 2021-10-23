@@ -1,10 +1,11 @@
 const fs = require('fs');
-const { read_csv } = require('./csv.js');
+const { write_csv } = require('./csv.js');
 
-const max_entrants      = 50; //helps with file size and sanity TODO
-const max_handle_length = 30; //helps with file size and displaying TODO
-const max_brackets      = 30; //helps reduce number of files randos can put on your computer TODO
-const archive = false;   //use this to have a backup copy of each day TODO implement
+const max_entrants       = 50; //helps with file size and seed sanity TODO
+const max_handle_length  = 30; //helps with file size and displaying TODO
+const max_bracket_length = 30; //helps keep file name sanity TODO
+const max_brackets       = 30; //helps keep file number sanity TODO
+const archive = false;   //use this to have a backup copy of each day TODO
 const bot_owner = 'Kit'; //people can contact you for special requests
 
 //raise or lower the rng factor to your liking, higher will make win rates matter less
@@ -49,8 +50,7 @@ function cmd_create(file, data, arg)
     return `Bracket ${file} already exists.`;
   
   //create file, it will be a userless bracket until joined
-  let file_handle = new File(file);
-  fs.write($.csv.fromObjects(new User(arg));
+  write_csv(new User(arg));
   return `Empty bracket ${file} created.`;
 }
 
@@ -211,7 +211,7 @@ function cmd_seed(file, data, arg)
     else if(user.wins === 0){                 user.ratio = (set_fac*0.0)+rng_fac; continue; }
     else if(user.losses === 0){               user.ratio = (set_fac*1.0)+rng_fac; continue; }
 
-    user.ratio = (set_fac*(user.wins / (user.wins + user.losses)) + rng_fac;
+    user.ratio = (set_fac*(user.wins / (user.wins + user.losses))) + rng_fac;
   }
 
   //choose your fighter
@@ -240,7 +240,7 @@ function cmd_seed(file, data, arg)
 
 
 
-function ommited_cmd(file, data, arg)
+function omitted_cmd(file, data, arg)
 {
   return `That operation is left out easy reach intentionally. Ask the bot owner, ${bot_owner}, to do it.`;
 }
