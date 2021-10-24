@@ -1,20 +1,27 @@
-const generate = require('csv-generate/lib/sync');
-const parse    = require('csv-parse/lib/sync');
-const assert   = require('assert');
-const fs       = require('fs');
+const fs        = require('fs');
+const stringify = require('csv-stringify');
+const parse     = require('csv-parse/lib/sync');
+//const assert    = require('assert');
 
 
 
 //returns populated data if success, otherwise undefined
 function read_csv(file)
 {
-  return parse(fs.readFileSync(`./brackets/${file}.csv`, { encoding: 'utf8', flag: 'r'} ),
-    { objectmode: true, columns: 4 });
+  try
+  {
+    return parse(fs.readFileSync(`./brackets/${file}.csv`),
+      { header: true, columns: true });
+  }
+  catch(e)
+  {
+    return undefined;
+  }
 }
 
 
 
-//returns true if success, otherwise false
+//returns 0 if success, otherwise 1
 function write_csv(file, data, archive)
 {
   const file_name = `./brackets/${file}.csv`;
@@ -34,10 +41,18 @@ function write_csv(file, data, archive)
   }
 
   //write file
-  const records = generate({ objectmode: true, columns: 4, length: data.length() });
-
-  return fs.writeFileSync(`./brackets/${file}.csv`, 
-    assert.deepEqual(records, data));
+  try
+  {
+    stringify(data, 
+      { header: true },
+      (err, out) => fs.writeFileSync(`./brackets/${file}.csv`, out));
+    return 0; //good, all went well
+  }
+  catch(e)
+  {
+    console.log(e);
+    return 1; //bad, there was an error
+  }
 }
 
 

@@ -25,7 +25,7 @@ class User
 }
 
 class Resp{
-  conststructor(message, code)
+  constructor(code, message)
   {
     this.code    = code;    //integer (0 for failure or 1 for success) to tell caller function
     this.message = message; //string to tell user
@@ -37,42 +37,48 @@ class Resp{
 //return - Resp
 //with the exception of create, 
 //  are run after validating the csv, so they don't need to do so themselves
-const cmd = new Map();
-cmd.set('-create',  cmd_create );
-cmd.set('-delete',  omitted_cmd);
-cmd.set('-modify',  omitted_cmd);
-cmd.set('-display', cmd_display);
-cmd.set('-join',    cmd_join   );
-cmd.set('-leave',   omitted_cmd);
-cmd.set('-pause',   cmd_pause  );
-cmd.set('-unpause', cmd_unpause);
-cmd.set('-win',     cmd_win    );
-cmd.set('-lose',    cmd_lose   );
-cmd.set('-seed',    cmd_seed   );
+const cmds = new Map();
+cmds.set('-create',  cmd_create );
+cmds.set('-delete',  omitted_cmd);
+cmds.set('-modify',  omitted_cmd);
+cmds.set('-display', cmd_display);
+cmds.set('-join',    cmd_join   );
+cmds.set('-leave',   omitted_cmd);
+cmds.set('-pause',   cmd_pause  );
+cmds.set('-unpause', cmd_unpause);
+cmds.set('-win',     cmd_win    );
+cmds.set('-lose',    cmd_lose   );
+cmds.set('-seed',    cmd_seed   );
 
 
 
 function cmd_create(file, data, arg)
 {
-  //CASE: user enterred bracket name longer than max_bracket_length - abort and tell user
-  if(arg.length() > max_bracket_length)
-    return Resp(1, `Your bracket name exceeds the ${max_bracket_length} character limit.\nShorten the name, or if that's not practical, ask the bot owner, ${bot_owner}, to increase the limit.`);
+  //CASE: user entered bracket name longer than max_bracket_length - abort and tell user
+  if(file.length > max_bracket_length)
+    return new Resp(1, `Your bracket name exceeds the ${max_bracket_length} character limit.\nShorten the name, or if that's not practical, ask the bot owner, ${bot_owner}, to increase the limit.`);
 
   //CASE: file already exists - abort and tell user
-  if(fs.existsSync(`./bracket/${file}.csv`) === true)
-    return Resp(1, `Bracket ${file} already exists.`);
+  try
+  { 
+    fs.accessSync(`./brackets/${file}.csv`, fs.constants.R_OK);
+    return new Resp(1, `Bracket ${file} already exists.`);
+  }
+  catch(e) { /*good to go*/ }
 
+  //TODO
   //CASE: max_brackets have been reached - abort and tell user
-  if(fs.readdirSync('./bracket/', (err, files) => { return files.length; }) >= max_brackets)
-    return Resp(1, `At max bracket count ${max_brackets}. Ask the bot owner, ${bot_owner} to increase the max or archive old brackets.`);
+  //if(fs.readdirSync(`./bracket/`, (err, files) => { return files.length; }) >= max_brackets)
+  //  return Resp(1, `At max bracket count ${max_brackets}. Ask the bot owner, ${bot_owner} to increase the max or archive old brackets.`);
 
-  //create file, it will be a userless bracket until joined
+  //create file, arg will be its only participant
   const resp = cmd_join(file, [], arg);
 
+  //CASE: for some reason making the 1-participant bracket failed - abort and tell user
   if(resp.code === 1)
-    return resp.message;
+    return resp;
 
-  return Resp(0, `Bracket ${file} with participant ${arg} created.`);
+  return new Resp(0, `Bracket ${file} with participant ${arg} created.`);
 }
 
 
@@ -94,51 +100,58 @@ function cmd_create(file, data, arg)
 
 
 //could be optimized, but this is easy to read and understand
+//TODO add arg to display just certain user
 function cmd_display(file, data, arg)
 {
-  let message = '';
-  let max_column_length = 
+  let max_col_length = 
   [
-    6, //String('HANDLE').length(),
-    6, //String('STATUS').length(),
-    4, //String('WINS').  length(),
-    6, //String('LOSSES').length()
+    6, //'HANDLE'.length(),
+    6, //'STATUS'.length(),
+    4, //'WINS'.  length(),
+    6, //'LOSSES'.length()
   ];
   let handle_length, status_length, wins_length, losses_length;
 
-  for(user of data)
+  //find max column lengths for all of the csv
+  for(let user of data)
   {
-    handle_length = user.handle.length();
-    status_length = user.status.length();
-    win_length    = user.wins.toString().length();
-    losses_length = user.losses.toString().length();
+    handle_length = user.handle.length;
+    status_length = user.status.length;
+    win_length    = user.wins.toString().length;
+    losses_length = user.losses.toString().length;
 
     if(handle_length > max_col_length[0]) max_col_length[0] = handle_length;
     if(status_length > max_col_length[1]) max_col_length[1] = status_length;
     if(wins_length   > max_col_length[2]) max_col_length[2] = wins_length;
     if(losses_length > max_col_length[3]) max_col_length[3] = losses_length;
 
-    user.winrate = user.wins / (user.wins + user.losses);
+    //CASE: participant has 0 wins or losses, which breaks calculation - assign them temp winrate
+    if(user.losses === '0' && user.wins === '0') user.winrate = 0.5;
+    else if(user.wins === '0')                   user.winrate = 0.0;
+    else if(user.losses === '0')                 user.winrate = 1.0;
+    else user.winrate = parseInt(user.wins, 10) / 
+      (parseInt(user.wins, 10) + parseInt(user.losses, 10));
   }
 
-  message.append(
-    String('HANDLE').padEnd(max_col_length[0], ' ') + ' ' +
-    String('STATUS').padEnd(max_col_length[1], ' ') + ' ' +
-    String('WINS').  padEnd(max_col_length[2], ' ') + ' ' +
-    String('LOSSES').padEnd(max_col_length[3], ' ') + ' ' +
-    'WINRATE'
-  );
+  //attach headers
+  let message = 
+    'HANDLE'.padEnd  (max_col_length[0], ' ') + ' ' +
+    'STATUS'.padEnd  (max_col_length[1], ' ') + ' ' +
+    'WINS'.  padStart(max_col_length[2], ' ') + ' ' +
+    'LOSSES'.padStart(max_col_length[3], ' ') + ' ' +
+    'WINRATE';
 
-  for(user of data)
-    message.append(
-      user.handle           .padEnd(max_col_length[0], ' ') + ' ' +
-      user.status           .padEnd(max_col_length[1], ' ') + ' ' +
-      user.wins  .toString().padEnd(max_col_length[2], ' ') + ' ' +
-      user.losses.toString().padEnd(max_col_length[3], ' ') + ' ' +
-      user.winrate.toFixed(3)
-    );
+  //attach participants
+  for(const user of data)
+    message += '\n' +
+      user.handle.padEnd  (max_col_length[0], ' ') + ' ' +
+      user.status.padEnd  (max_col_length[1], ' ') + ' ' +
+      user.wins  .padStart(max_col_length[2], ' ') + ' ' +
+      user.losses.padStart(max_col_length[3], ' ') + ' ' +
+      user.winrate.toFixed(4).padStart(7, ' ');
 
-  return Resp(0, `\`\`\`${message}\`\`\``);
+  //return resuly in monospace
+  return new Resp(0, `\`\`\`${message}\`\`\``);
 }
 
 
@@ -146,99 +159,101 @@ function cmd_display(file, data, arg)
 function cmd_join(file, data, arg)
 {
   //CASE: the bracket has reached max_participants - abort and tell user
-  if(data.length() >= max_participants)
-    return Resp(1, `The max number of participants, ${max_participants}, for the bracket has been reached.\nIf you feel you should be in, ask the bot owner, ${bot_owner}, to increase the max or find chronocally inactive participants to kick.`);
+  if(data.length >= max_participants)
+    return new Resp(1, `The max number of participants, ${max_participants}, for the bracket has been reached.\nIf you feel you should be in, ask the bot owner, ${bot_owner}, to increase the max or find chronically inactive participants to kick.`);
 
   //CASE: user enterred handle name longer than max_handle_length - abort and tell user
-  if(arg.length() > max_handle_length)
-    return Resp(1, `The handle name exceeds the ${max_handle_length} max character limit.\nShorten the handle, or if that's not practical, ask the bot owner, ${bot_owner}, to increase the limit.`);
+  if(arg.length > max_handle_length)
+    return new Resp(1, `The handle name exceeds the ${max_handle_length} max character limit.\nShorten the handle, or if that's not practical, ask the bot owner, ${bot_owner}, to increase the limit.`);
 
-  //CASE: user is already in bracket - tell them and do nothing
+  //CASE: arg is already in bracket - abort and tell user
   if(data.findIndex(user => user.handle === arg) !== -1)
-    return Resp(1, `${user} is already participating in bracket ${file}.`);
+    return new Resp(1, `${arg} is already participating in bracket ${file}.`);
 
-  //append the user
-  data.append(new User(arg));
-  write_csv(file, data, archive);
-  return Resp(0, `${user} is now participating in bracket ${file}.`);
+  //append arg to bracket
+  data.push(new User(arg));
+  write_csv(file, data, archive); //TODO add case for if file write fails for all
+  return new Resp(0, `${arg} is now participating in bracket ${file}.`);
 }
 
 
 
 function cmd_pause(file, data, arg)
 {
-  //CASE: user is not in bracket - tell them and do nothing
+  //CASE: arg is not in bracket - abort and tell user
   if(data.findIndex(user => user.handle === arg) === -1)
-    return Resp(1, `${user} is not participating in bracket ${file}.`);
+    return new Resp(1, `${arg} is not participating in bracket ${file}.`);
 
-  //CASE: user is already paused
+  //CASE: arg is already paused - abort and tell user
   if(data.find(user => user.handle === arg).status === 'away')
-    return Resp(1, `${user} is already paused.`);
+    return new Resp(1, `${arg} is already paused.`);
 
   //pause user
   data.find(user => user.handle === arg).status = 'away';
   write_csv(file, data, archive);
-  return Resp(0, `${user} paused.`);
+  return new Resp(0, `${arg} paused in bracket ${file}.`);
 }
 
 
 
 function cmd_unpause(file, data, arg)
 {
-  //CASE: user is not in bracket - tell them and do nothing
+  //CASE: arg is not in bracket - abort and tell user
   if(data.findIndex(user => user.handle === arg) === -1)
-    return Resp(1, `${user} is not participating in bracket ${file}.`);
+    return new Resp(1, `${arg} is not participating in bracket ${file}.`);
 
-  //CASE: user is already paused
+  //CASE: arg is already unpaused - abort and tell user
   if(data.find(user => user.handle === arg).status === 'active')
-    return Resp(1, `${user} is already unpaused.`);
+    return new Resp(1, `${arg} is already unpaused.`);
 
   //unpause user
   data.find(user => user.handle === arg).status = 'active';
   write_csv(file, data, archive);
-  return Resp(0, `${user} unpaused.`);
+  return new Resp(0, `${arg} unpaused in bracket ${file}.`);
 }
 
 
 
 function cmd_win(file, data, arg)
 {
-  //CASE: user is not in bracket - tell them and do nothing
+  //CASE: arg is not in bracket - abort and tell user
   if(data.findIndex(user => user.handle === arg) === -1)
-    return Resp(1, `${user} is not participating in bracket ${file}.`);
+    return new Resp(1, `${arg} is not participating in bracket ${file}.`);
 
-  //increment wins on user
+  //increment wins on arg
   ++data.find(user => user.handle === arg).wins;
   write_csv(file, data, archive);
-  return Resp(0, `${user} now has one more win.`);
+  return new Resp(0, `${arg} now has one more win.`);
 }
 
 
 
 function cmd_lose(file, data, arg)
 {
-  //CASE: user is not in bracket - tell them and do nothing
+  //CASE: arg is not in bracket - abort and tell user
   if(data.findIndex(user => user.handle === arg) === -1)
-    return Resp(1, `${user} is not participating in bracket ${file}.`);
+    return new Resp(1, `${arg} is not participating in bracket ${file}.`);
 
-  //increment losses on user
+  //increment losses on arg
   ++data.find(user => user.handle === arg).losses;
   write_csv(file, data, archive);
-  return Resp(0, `${user} now has one more loss.`);
+  return new Resp(0, `${arg} now has one more loss.`);
 }
 
 
 
 function cmd_seed(file, data, arg)
 {
-  for(const user of data)
+  //calculate winrates
+  for(let user of data)
   {
-    //CASE: participant has 0 wins or losses, which would break normal division calculation
-    if(user.losses === 0 && user.wins === 0){ user.ratio = (set_fac*0.5)+rng_fac; continue; }
-    else if(user.wins === 0){                 user.ratio = (set_fac*0.0)+rng_fac; continue; }
-    else if(user.losses === 0){               user.ratio = (set_fac*1.0)+rng_fac; continue; }
+    //CASE: participant has 0 wins or losses, breaks calculation - assign them temp winrate
+    if(user.losses === '0' && user.wins === '0'){ user.ratio = (set_fac*0.5)+rng_fac; continue; }
+    else if(user.wins === '0'){                   user.ratio = (set_fac*0.0)+rng_fac; continue; }
+    else if(user.losses === '0'){                 user.ratio = (set_fac*1.0)+rng_fac; continue; }
 
-    user.ratio = (set_fac*(user.wins / (user.wins + user.losses))) + rng_fac;
+    user.ratio = (set_fac*parseInt(user.wins, 10)) / 
+      (parseInt(user.wins, 10) + parseInt(user.losses, 10)) + rng_fac;
   }
 
   //choose your fighter
@@ -248,15 +263,16 @@ function cmd_seed(file, data, arg)
     case 'some_rng': data = sort_some_rng(data); break;
     case 'pure_rng': data = sort_pure_rng(data); break;
     default: 
-      return Resp(1, `RNG level not recognised. Your options are no_rng, some_rng, or pure_rng.`);
+      return new Resp(1, `RNG level not recognised. The options are no_rng, some_rng, or pure_rng.`);
       break;
   }
 
-  const length = data.length();
+  let message = '';
+  const length = data.length;
   for(let i = 0; i < length; i +=2)
-    message.append(`${data[i].handle} - ${i + 1 < length ? data[i+1].handle : '???'}\n`);
+    message += `${data[i].handle} - ${i + 1 < length ? data[i+1].handle : '???'}\n`;
 
-  return Resp(0, `\`\`\`${message}\`\`\``);
+  return new Resp(0, `\`\`\`${message}\`\`\``);
 }
 
 
@@ -276,33 +292,34 @@ function omitted_cmd(file, data, arg)
 
 function sort_no_rng(data)
 {
-  data.sort((user_1, user_2) => user_1.ratio - user_2.ratio);
-  return data;
+  return data.sort((user_1, user_2) => user_2.ratio - user_1.ratio);
 }
 
 
 
+//TODO idk why this isn't working
 function sort_some_rng(data)
 {
   let user_ratio_total = 0.0;
-  for(user of data)
+  for(const user of data)
     user_ratio_total += user.ratio;
 
   let user_index = 0;
   let list = [];
-  let length = data.length();
+  let length = data.length;
 
   for(let run = 0; run < length; ++run)
   {
     //users with higher win ratios are more likely to get picked next (as they subtract more),
     //inducing some kind of order
-    for(let rng = Math.random() % user_ratio_total, user_index = 0;
-      rng > user.ratio;
-      rng -= user.ratio, ++user_index);
+    //JS random goes from 0 to 1 in float, not 0 to INT_MAX in integer
+    for(let rng = Math.random() * user_ratio_total, user_index = 0;
+      rng > data[user_index].ratio;
+      rng -= data[user_index].ratio, ++user_index);
 
     user_ratio_total -= data[user_index].ratio;
 
-    list.append(data[user_index]);
+    list.push(data[user_index]);
     data.splice(user_index, 1);
   }
 
@@ -315,12 +332,13 @@ function sort_pure_rng(data)
 {
   let rng = undefined;
   let list = [];
-  let length = data.length();
+  let length = data.length;
 
   for(let i = 0; i < length; ++i)
   {
-    rng = Math.random() % data.length();
-    list.append(data[rng]);
+    //JS random goes from 0 to 1 in float, not 0 to INT_MAX in integer
+    rng = Math.floor(Math.random() * data.length);
+    list.push(data[rng]);
     data.splice(rng, 1);
   }
 
@@ -362,4 +380,4 @@ function sort_some_rng(data)
 }
 */
 
-module.exports = cmd;
+exports.cmds = cmds;
