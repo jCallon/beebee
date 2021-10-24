@@ -1,4 +1,4 @@
-[bot icon once I make it]
+![bot icon profile picture](profile_pic/beebee.png)
 
 # Beebee
 
@@ -39,7 +39,7 @@ This command is intentionally unimplemented so no average user can accidentally 
 
 `!bracket my_bracket -display`
 
-Display all the information of `$my_bracket`. Do this in DMs if you wish to avoid clutter.
+Display all the information of `$my_bracket`.
 
 ### -modify
 
