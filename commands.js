@@ -1,10 +1,10 @@
 const fs = require('fs');
 const { write_csv } = require('./csv.js');
 
-const max_participants   = 50; //helps with file size and seed sanity
-const max_handle_length  = 20; //helps with file size and displaying
-const max_bracket_length = 30; //helps with file name sanity
-const max_brackets       = 30; //helps with file number sanity
+const max_participants   = 50;   //helps with file size and seed sanity
+const max_handle_length  = 20;   //helps with file size and displaying
+const max_bracket_length = 30;   //helps with file name sanity
+const max_brackets       = 15+1; //helps with file number sanity, +1 is for archive dir
 const archive = false;   //use this to have a backup copy of each day
 const bot_owner = 'Kit'; //people can contact you for special requests
 
@@ -66,10 +66,9 @@ function cmd_create(file, data, arg)
   }
   catch(e) { /*good to go*/ }
 
-  //TODO
   //CASE: max_brackets have been reached - abort and tell user
-  //if(fs.readdirSync(`./bracket/`, (err, files) => { return files.length; }) >= max_brackets)
-  //  return Resp(1, `At max bracket count ${max_brackets}. Ask the bot owner, ${bot_owner} to increase the max or archive old brackets.`);
+  if(fs.readdirSync(`./brackets/`).length >= max_brackets)
+    return new Resp(1, `At max bracket count ${max_brackets}. Ask the bot owner, ${bot_owner} to increase the max or archive old brackets.`);
 
   //create file, arg will be its only participant
   const resp = cmd_join(file, [], arg);

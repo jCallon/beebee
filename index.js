@@ -39,6 +39,9 @@ client.on('messageCreate', message =>
   if(/^!bracket [\w_-\d]* -[\w_-]*$/.test(cmd) ||
      /^!bracket [\w_-\d]* -[\w_-]* [\w_-\d]*$/.test(cmd))
   {
+    //log command
+    console.log(`${new Date().toDateString()} ${message.author.tag}: ${cmd}`);
+
     //parse command
     const cmd_split = cmd.split(' ');
     const file = cmd_split[1];
